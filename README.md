@@ -1,61 +1,112 @@
-📧 Email Sentiment Analysis Dashboard
-A Flask-based web application that fetches emails from a Gmail inbox, analyzes their sentiment using a local Ollama model, and displays them in an interactive dashboard.
-
+📧 Email Sentiment Analyzer (Flask + Ollama + Gmail API)
+This project automatically analyzes the sentiment of incoming Gmail emails using local LLMs via Ollama and organizes them into Positive, Negative, or Neutral categories.
+It stores results in a MySQL database, displays them on an interactive Flask dashboard, and forwards emails to different Gmail addresses based on sentiment.
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ✨ Features
-📩 Fetch Unread Emails from Gmail using the Gmail API
+📬 Fetch Unread Emails directly from Gmail API
 
-🧠 Sentiment Analysis with Ollama (Positive, Negative, Neutral)
+🧠 Sentiment Analysis using local Ollama LLMs (Gemma 2B & Yi 9B)
 
-📊 Categorized Dashboard for quick sentiment-based viewing
+📊 Interactive Dashboard with filters by sentiment, sender, and date
 
-🔄 Refresh Button to fetch new unread emails instantly
+🗂 MySQL Database to store email history & sentiment results
 
-💾 Local Database Storage for saving email records
+📤 Automatic Email Forwarding to team inboxes based on sentiment
 
-🛠️ Tech Stack
-Component	Technology Used
-Backend	Flask (Python)
-Frontend	HTML, CSS, JavaScript
-Database	SQLite
-API	Gmail API
-AI Model	Ollama
+🔄 Refresh Button to update dashboard with latest unread emails
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+🧪 Model Comparison
 
-📂 Project Structure
+| Model   | Pros                                  | Cons                               |
+| ------- | ------------------------------------- | ---------------------------------- |
+| Yi 9B   | Identifies more sentiment-driving keywords | Occasionally over-labels sentiment |
+| Gemma 2B| More consistent and conservative           | May miss subtle emotional cues     |
 
-Email-Sentiment/
-│── static/css/           # Stylesheets
-│── templates/            # HTML Templates
-│── app.py                 # Main Flask App
-│── db_utils.py            # Database Helper Functions
-│── email_utils.py         # Email Processing Functions
-│── fetch_emails.py        # Email Fetching Logic
-│── gmail_auth.py          # Gmail Authentication
-│── init_db.py             # Database Initialization
-│── ollama_utils.py        # Ollama Sentiment Analysis
-│── emails.db              # SQLite Database
-│── README.md              # Documentation
-🚀 Getting Started
-1️⃣ Clone the repository:
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+⚙️ Project Architecture
 
-git clone https://github.com/ArunNamagiri/Email-Sentiment.git
-cd Email-Sentiment
+📦 Email_Sentiment_dashboard
+│
+├── 📁 templates/  
+│   └── 📝 dashboard.html — HTML for Flask dashboard  
+│
+├── 📁 static/ — CSS, JS, images (optional)  
+├── 📁 venv/ — Python virtual environment  
+│
+├── 🔑 .env — Environment variables (API keys, DB creds)  
+├── 🚀 app.py — Flask app entry point  
+├── 📬 fetch_loop.py — Gmail fetcher & sentiment processor  
+├── 🤖 process_email.py — Model sentiment classification logic  
+├── 🗄️ database.sql — MySQL table schema  
+├── 📦 requirements.txt — Python dependencies  
+└── 📘 README.md — Project documentation
 
-2️⃣ Install dependencies:
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+🚀 Setup & Usage
+
+1️⃣ Clone the repository
+
+git clone https://github.com/yourusername/email_sentiment_dashboard.git
+cd email_sentiment_dashboard
+
+2️⃣ Create and activate virtual environment
+
+python3 -m venv venv
+source venv/bin/activate   # Mac/Linux
+venv\Scripts\activate      # Windows
+
+3️⃣ Install dependencies
 
 pip install -r requirements.txt
-3️⃣ Configure Gmail API:
 
-Enable the Gmail API in Google Cloud Console
-Download credentials.json and place it in the project root
+4️⃣ Configure environment
+ Create a .env file in the project root:
 
-4️⃣ Run the app
+GMAIL_CLIENT_ID=your_client_id
+
+GMAIL_CLIENT_SECRET=your_client_secret
+
+MYSQL_HOST=localhost
+
+MYSQL_USER=root
+
+MYSQL_PASSWORD=yourpassword
+
+MYSQL_DATABASE=email_sentiment
+
+5️⃣ Start MySQL and Ollama
+ Ensure MySQL is running locally
+ Start Ollama and pull required models:
+
+ollama pull gemma:2b
+
+ollama pull yi:9b
+
+6️⃣ Run email fetcher loop
+
+python fetch_loop.py
+
+7️⃣ Launch dashboard
 
 python app.py
-Visit http://127.0.0.1:5000/ in your browser.
 
-📸 Screenshots
+Dashboard will be available at: http://127.0.0.1:5000
 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+📤 Email Routing Logic
 
+Positive → Forward to positiveteam@example.com
+
+Negative → Forward to negativeteam@example.com
+
+Neutral → Forward to neutralteam@example.com
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 📜 License
-This project is licensed under the MIT License.
+This project is licensed under the Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0).
+© 2025 Your Name. All rights reserved.
+
+
+
 
