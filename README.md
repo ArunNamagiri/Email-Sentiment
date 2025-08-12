@@ -21,9 +21,7 @@ API	Gmail API
 AI Model	Ollama
 
 📂 Project Structure
-bash
-Copy
-Edit
+
 Email-Sentiment/
 │── static/css/           # Stylesheets
 │── templates/            # HTML Templates
@@ -37,31 +35,26 @@ Email-Sentiment/
 │── emails.db              # SQLite Database
 │── README.md              # Documentation
 🚀 Getting Started
-1️⃣ Clone the repository
-bash
-Copy
-Edit
+1️⃣ Clone the repository:
+
 git clone https://github.com/ArunNamagiri/Email-Sentiment.git
 cd Email-Sentiment
-2️⃣ Install dependencies
-bash
-Copy
-Edit
-pip install -r requirements.txt
-3️⃣ Configure Gmail API
-Enable the Gmail API in Google Cloud Console
 
+2️⃣ Install dependencies:
+
+pip install -r requirements.txt
+3️⃣ Configure Gmail API:
+
+Enable the Gmail API in Google Cloud Console
 Download credentials.json and place it in the project root
 
 4️⃣ Run the app
-bash
-Copy
-Edit
+
 python app.py
 Visit http://127.0.0.1:5000/ in your browser.
 
 📸 Screenshots
-Dashboard View	Sentiment Categories
+
 
 📜 License
 This project is licensed under the MIT License.
