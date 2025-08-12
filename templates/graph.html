@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Email Sentiment Graph{% endblock %}
+
+{% block content %}
+<div class="p-8">
+    <h2 class="text-3xl font-bold mb-4 text-gray-900">Sentiment Overview</h2>
+    <div class="flex items-center space-x-4 mb-6">
+        <a href="{{ url_for('dashboard') }}" class="inline-flex items-center justify-center bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-full shadow-md hover:bg-gray-300 hover:scale-105 transition-all duration-200">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Back to Dashboard
+        </a>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-lg">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Email Sentiment Distribution</h3>
+        <canvas id="sentimentBarChart" width="400" height="200"></canvas>
+    </div>
+
+    <div class="mt-8 bg-white p-6 rounded-lg shadow-lg">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Detailed Sentiment Statistics</h3>
+        <ul>
+            <li class="mb-2"><strong>Total Emails Analyzed:</strong> {{ sentiment_data['positive'] + sentiment_data['negative'] + sentiment_data['neutral'] }}</li>
+            <li class="mb-2"><strong>Positive Emails:</strong> <span class="text-green-600 font-bold">{{ sentiment_data['positive'] }}</span></li>
+            <li class="mb-2"><strong>Negative Emails:</strong> <span class="text-red-600 font-bold">{{ sentiment_data['negative'] }}</span></li>
+            <li class="mb-2"><strong>Neutral Emails:</strong> <span class="text-gray-500 font-bold">{{ sentiment_data['neutral'] }}</span></li>
+        </ul>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const sentimentData = {
+            positive: Number("{{ sentiment_data['positive'] | default(0, true) }}"),
+            negative: Number("{{ sentiment_data['negative'] | default(0, true) }}"),
+            neutral: Number("{{ sentiment_data['neutral'] | default(0, true) }}")
+        };
+
+        const ctx = document.getElementById('sentimentBarChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Positive', 'Negative', 'Neutral'],
+                datasets: [{
+                    label: '# of Emails',
+                    data: [sentimentData.positive, sentimentData.negative, sentimentData.neutral],
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.6)', // Green for positive
+                        'rgba(255, 99, 132, 0.6)', // Red for negative
+                        'rgba(201, 203, 207, 0.6)' // Gray for neutral
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(201, 203, 207, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Emails'
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

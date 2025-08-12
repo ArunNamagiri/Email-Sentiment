@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Sentiment Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            /* Hide scrollbars due to canvas animation */
+        }
+
+        #background-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            /* Send to background */
+        }
+    </style>
+</head>
+
+<body
+    class="bg-gradient-to-br from-blue-100 via-sky-200 to-cyan-300 min-h-screen flex items-center justify-center text-gray-900">
+
+    <canvas id="background-canvas"></canvas>
+
+    <div
+        class="relative z-10 text-center p-8 bg-white bg-opacity-70 rounded-xl shadow-2xl max-w-2xl mx-auto backdrop-blur-sm">
+        <h1 id="main-title" class="text-5xl md:text-6xl font-extrabold mb-4 opacity-0 transform -translate-y-10">
+            <span class="block text-gray-900">Email Sentiment</span>
+            <span class="block text-blue-500">Analyzer</span>
+        </h1>
+        <p id="description-text" class="text-lg md:text-xl mb-8 text-gray-700 opacity-0 transform translate-y-10">
+            Unlock insights from your inbox. This intelligent tool reads unread emails, analyzes sentiment using
+            advanced AI, and provides actionable insights.
+        </p>
+        <a id="dashboard-button" href="/dashboard"
+            class="inline-block bg-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-blue-600 hover:scale-105 transition-all duration-300 opacity-0">
+            Go to Analysed Emails
+            
+        </a>
+        
+    </div>
+
+
+    <script>
+        // GSAP Animations
+        gsap.fromTo("#main-title",
+            { opacity: 0, y: -50 },
+            { opacity: 1, y: 0, duration: 1.2, ease: "power3.out" }
+        );
+
+        gsap.fromTo("#description-text",
+            { opacity: 0, y: 50 },
+            { opacity: 1, y: 0, duration: 1.2, delay: 0.3, ease: "power3.out" }
+        );
+
+        gsap.fromTo("#dashboard-button",
+            { opacity: 0, scale: 0.8 },
+            { opacity: 1, scale: 1, duration: 0.8, delay: 0.6, ease: "back.out(1.7)" }
+        );
+
+        // Background Canvas Animation (Simple Particle Effect)
+        const canvas = document.getElementById('background-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const numParticles = 50;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initParticles();
+        }
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < numParticles; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 2 + 1,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    color: `rgba(0, 0, 0, ${Math.random() * 0.1 + 0.05})` // Subtle dark particles
+                });
+            }
+        }
+
+        function animateParticles() {
+            requestAnimationFrame(animateParticles);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Wrap particles around the screen
+                if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+            });
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        window.onload = function () {
+            resizeCanvas();
+            animateParticles();
+        };
+
+    </script>
+</body>
+
+</html>
