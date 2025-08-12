@@ -48,48 +48,49 @@ It stores results in a MySQL database, displays them on an interactive Flask das
 
 1️⃣ Clone the repository:
 
- git clone https://github.com/yourusername/email_sentiment_dashboard.git
+ •	Project Repository: https://github.com/yourusername/email_sentiment_dashboard.git
  
- cd email_sentiment_dashboard
+ •	Project Directory: email_sentiment_dashboard
 
+ 
 2️⃣ Create and activate virtual environment:
 
- python3 -m venv venv
+ •	python3 -m venv venv
+ 
+ •	source venv/bin/activate  # Mac/Linux
+ 
+ •	venv\Scripts\activate      # Windows
 
- source venv/bin/activate  # Mac/Linux
-
- venv\Scripts\activate      # Windows
 
 3️⃣ Install dependencies:
 
-pip install -r requirements.txt
+•	pip install -r requirements.txt
 
 4️⃣ Configure environment:
 
  Create a .env file in the project root:
 
- GMAIL_CLIENT_ID=your_client_id
+ •	GMAIL_CLIENT_ID=your_client_id
+ 
+ •	GMAIL_CLIENT_SECRET=your_client_secret
+ 
+ •	MYSQL_HOST=localhost
+ 
+ •	MYSQL_USER=root
+ 
+ •	MYSQL_PASSWORD=yourpassword
+ 
+ •	MYSQL_DATABASE=email_sentiment
 
- GMAIL_CLIENT_SECRET=your_client_secret
-
- MYSQL_HOST=localhost
-
- MYSQL_USER=root
-
- MYSQL_PASSWORD=yourpassword
-
- MYSQL_DATABASE=email_sentiment
 
 5️⃣ Start MySQL and Ollama:
-
- Ensure MySQL is running locally
+	  Ensure MySQL is running locally
+	 	Start Ollama and pull models:
  
- Start Ollama and pull required models:
-
- ollama pull gemma:2b
-
- ollama pull yi:9b
-
+   •	ollama pull gemma:2b
+   
+   •	ollama pull yi:9b
+ 
 6️⃣ Run email fetcher loop:
 
  python fetch_loop.py
@@ -102,11 +103,12 @@ pip install -r requirements.txt
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 📤 Email Routing Logic
 
- Positive → Forward to positiveteam@example.com
+ •	Positive → Forward to positiveteam@example.com
+ 
+ •	Negative → Forward to negativeteam@example.com
+ 
+ •	Neutral → Forward to neutralteam@example.com
 
- Negative → Forward to negativeteam@example.com
-
- Neutral → Forward to neutralteam@example.com
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 📜 License
