@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email Sentiment Analysis Login</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #c9ccce, #d7ecf6, #c2dae6);
+    overflow: hidden;
+  }
+  .login-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+    padding: 3rem;
+    max-width: 400px;
+    width: 90%;
+    z-index: 10;
+  }
+  .form-input-group {
+    position: relative;
+    margin-bottom: 2rem;
+  }
+  .form-input-group input {
+    width: 100%;
+    padding: 10px 10px 10px 40px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #f9fafb;
+    transition: all 0.3s ease;
+    outline: none;
+    font-size: 1rem;
+  }
+  .form-input-group input:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 1px #4f46e5;
+  }
+  .form-input-group label {
+    position: absolute;
+    left: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    background: #f9fafb;
+    padding: 0 5px;
+  }
+  .form-input-group input:focus + label,
+  .form-input-group input:not(:placeholder-shown) + label {
+    top: 0;
+    left: 35px;
+    font-size: 0.75rem;
+    color: #4f46e5;
+  }
+  .form-input-group svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    color: #9ca3af;
+    z-index: 2;
+  }
+</style>
+</head>
+<body>
+
+    <div class="login-card" id="loginCard">
+        <h2 class="text-3xl font-extrabold text-gray-800 text-center mb-6">Email Sentiment Analysis</h2>
+        <p class="text-center text-gray-600 mb-8">Sign in to view your email analysis dashboard.</p>
+
+        {% if error %}
+        <div id="error-message" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded" role="alert">
+            <p>{{ error }}</p>
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="form-input-group">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <input type="email" id="email" name="email" placeholder=" " required>
+                <label for="email">Email Address</label>
+            </div>
+            
+            <div class="form-input-group">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6-6h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v4a2 2 0 002 2z" />
+                </svg>
+                <input type="password" id="password" name="password" placeholder=" " required>
+                <label for="password">Password</label>
+            </div>
+
+            <button type="submit" id="loginButton"
+                class="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-300 transform hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
+                Log In
+            </button>
+        </form>
+
+    </div>
+
+    <script>
+        gsap.from("#loginCard", { duration: 0.8, y: 50, opacity: 0, ease: "back.out(1.7)" });
+        gsap.from(".form-input-group", { duration: 0.5, opacity: 0, y: 10, stagger: 0.2, delay: 0.5 });
+    </script>
+</body>
+</html>

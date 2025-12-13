@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Sentiment Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9;
+        }
+
+        .data-cell {
+            white-space: normal;
+            word-wrap: break-word;
+            max-width: 300px;
+        }
+
+        .body-cell {
+            max-width: 350px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .stat-card-animated {
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            border-bottom-width: 4px;
+        }
+
+        .stat-card-animated:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+                0 4px 6px -4px rgba(0, 0, 0, 0.05);
+        }
+
+        .animated-row {
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        .animated-row:hover {
+            background-color: #e5e7eb;
+        }
+
+        .spinner {
+            border-top-color: transparent;
+            border-left-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="p-4 sm:p-8">
+
+    <header class="mb-8 flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-xl">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-800 mb-2 sm:mb-0">Email Analysis Dashboard</h1>
+        <nav class="flex space-x-4">
+            <a href="{{ url_for('index') }}"
+                class="text-indigo-600 hover:text-indigo-800 font-semibold border-b-2 border-indigo-600 pb-1">Dashboard</a>
+            <a href="{{ url_for('sentiment_graph') }}"
+                class="text-gray-600 hover:text-indigo-800 font-semibold">Graph</a>
+            <a href="{{ url_for('logout') }}" class="text-red-600 hover:text-red-800 font-semibold">Logout</a>
+        </nav>
+    </header>
+
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="stat-card-animated p-6 rounded-xl shadow-lg bg-white border-indigo-600">
+            <p class="text-lg font-medium text-gray-500">Total Analyzed</p>
+            <p id="stat-total" class="mt-1 text-4xl font-extrabold text-indigo-600">{{ stats.total }}</p>
+        </div>
+        <div class="stat-card-animated p-6 rounded-xl shadow-lg bg-white border-green-600">
+            <p class="text-lg font-medium text-gray-500">Positive Sentiment</p>
+            <p id="stat-positive" class="mt-1 text-4xl font-extrabold text-green-600">{{ stats.positive }}</p>
+        </div>
+        <div class="stat-card-animated p-6 rounded-xl shadow-lg bg-white border-red-600">
+            <p class="text-lg font-medium text-gray-500">Negative Sentiment</p>
+            <p id="stat-negative" class="mt-1 text-4xl font-extrabold text-red-600">{{ stats.negative }}</p>
+        </div>
+        <div class="stat-card-animated p-6 rounded-xl shadow-lg bg-white border-yellow-600">
+            <p class="text-lg font-medium text-gray-500">Neutral/Other</p>
+            <p id="stat-neutral" class="mt-1 text-4xl font-extrabold text-yellow-600">{{ stats.neutral }}</p>
+        </div>
+    </section>
+
+    <div id="message-container" class="mb-4"></div>
+
+    <section class="table-container bg-white p-4 sm:p-6 rounded-xl shadow-xl overflow-x-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-semibold text-gray-800">Email Analysis History</h2>
+            <button id="refresh-button" onclick="fetchData()"
+                class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-colors flex items-center">
+                <div id="spinner" class="spinner hidden mr-2 w-4 h-4 border-2 rounded-full border-white"></div>
+                <span id="refresh-text">Refresh Data</span>
+            </button>
+        </div>
+
+        <table class="email-table w-full text-sm text-left text-gray-500">
+            <thead class="text-xs uppercase bg-gray-200 text-gray-800">
+                <tr>
+                    <th class="py-3 px-6">No.</th>
+                    <th class="py-3 px-6">Sender</th>
+                    <th class="py-3 px-6">Subject</th>
+                    <th class="py-3 px-6 body-cell">Body (Snippet)</th>
+                    <th class="py-3 px-6">Sentiment</th>
+                    <th class="py-3 px-6">Timestamp (IST)</th>
+                    <th class="py-3 px-6">Analysis</th>
+                    <th class="py-3 px-6">Forwarded To</th>
+
+                </tr>
+            </thead>
+            <tbody id="email-table-body">
+                {% for email in emails %}
+                {% set row_class = "bg-gray-100" if loop.index is odd else "bg-white" %}
+                <tr class="border-b animated-row {{ row_class }}">
+                    <td class="py-4 px-6 font-medium text-gray-900">{{ loop.index }}</td>
+                    <td class="py-4 px-6 font-medium text-gray-900 data-cell">{{ email.sender }}</td>
+                    <td class="py-4 px-6 font-medium text-gray-900 data-cell">{{ email.subject }}</td>
+                    <td class="py-4 px-6 text-gray-600 body-cell" title="{{ email.body }}">{{ email.body[:50] }}{% if
+                        email.body|length > 50 %}...{% endif %}</td>
+                    {% set sentiment = email.ai_sentiment | lower %}
+                    {% set badge_color = 'bg-green-100 text-green-700' if 'positive' in sentiment else ('bg-red-100
+                    text-red-700' if 'negative' in sentiment else 'bg-yellow-100 text-yellow-700') %}
+                    <td class="py-4 px-6"><span
+                            class="px-2 py-0.5 rounded-full text-xs font-semibold {{ badge_color }}">{{
+                            email.ai_sentiment
+                            }}</span></td>
+                    <td class="py-4 px-6">{{ email.timestamp }}</td>
+                    <td class="py-4 px-6"><button onclick='showEmailDetails({{ email | tojson | safe }})'
+                            class="text-indigo-600 hover:text-indigo-800 font-semibold text-sm">View Analysis</button>
+                    </td>
+                    <td class="py-4 px-6 text-sm text-gray-700">
+                        {{ email.forwarded_to or "—" }}
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+    <div id="email-modal"
+        class="fixed inset-0 z-50 hidden overflow-y-auto bg-gray-900 bg-opacity-75 flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl p-6 sm:p-8 max-w-4xl w-full mx-4 my-8 relative"
+            onclick="event.stopPropagation()">
+            <button onclick="document.getElementById('email-modal').classList.add('hidden')"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2" id="modal-subject"></h3>
+
+            <div class="space-y-6">
+                <div class="bg-indigo-50 p-4 rounded-lg shadow-inner border-l-4 border-indigo-500">
+                    <p class="text-sm font-semibold text-indigo-700 mb-2 flex items-center">AI Summary:</p>
+                    <p class="text-gray-700" id="modal-summary"></p>
+                </div>
+
+                <div class="bg-green-50 p-4 rounded-lg shadow-inner border-l-4 border-green-500">
+                    <p class="text-sm font-semibold text-green-700 mb-2 flex items-center">Suggested Reply:</p>
+                    <p class="text-gray-700 whitespace-pre-wrap" id="modal-reply"></p>
+                </div>
+
+                <div>
+                    <p class="text-lg font-semibold text-gray-700 mb-2">Original Email Body:</p>
+                    <div class="bg-gray-100 p-4 rounded-lg max-h-60 overflow-y-auto text-sm text-gray-600 whitespace-pre-wrap border border-gray-300"
+                        id="modal-body"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MESSAGE_TIMEOUT = 5000;
+
+        function displayMessage(text, type = 'success') {
+            const container = document.getElementById('message-container');
+            const colorClass = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+            const html = `<div class="${colorClass} text-white p-3 rounded-lg mb-2 shadow-md flex justify-between items-center animate-fade-in-up">
+        <span>${text}</span>
+        <button onclick="this.parentNode.remove()" class="text-lg leading-none font-bold opacity-75 hover:opacity-100 transition-opacity">&times;</button>
+    </div>`;
+            container.insertAdjacentHTML('afterbegin', html);
+            setTimeout(() => container.firstChild?.remove(), MESSAGE_TIMEOUT);
+        }
+
+        async function fetchData() {
+            const btn = document.getElementById('refresh-button');
+            const spinner = document.getElementById('spinner');
+            const text = document.getElementById('refresh-text');
+
+            btn.disabled = true;
+            spinner.classList.remove('hidden');
+            text.textContent = 'Analyzing...';
+            btn.classList.add('bg-gray-400', 'cursor-not-allowed');
+            btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+
+            try {
+                const response = await fetch('/api/refresh', { method: 'POST' });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+
+                if (data.error) displayMessage(`Refresh failed. ${data.error}`, 'error');
+                else displayMessage('Email data refreshed successfully!', 'success');
+
+                updateEmailTable(data.emails || []);
+                updateStats(data.stats || {});
+            } catch (err) {
+                console.error(err);
+                displayMessage('Network error: Could not connect to server.', 'error');
+            } finally {
+                spinner.classList.add('hidden');
+                text.textContent = 'Refresh Data';
+                btn.disabled = false;
+                btn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                btn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            }
+        }
+
+        function updateEmailTable(emails) {
+            const tbody = document.getElementById('email-table-body');
+            if (!emails || emails.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-gray-500">No emails found. Click Refresh Data.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = emails.map((email, i) => {
+                const rowClass = (i + 1) % 2 !== 0 ? 'bg-gray-100' : 'bg-white';
+                // CORRECTION: Used email.ai_sentiment
+                const sentiment = (email.ai_sentiment || 'unknown').toLowerCase();
+                const badgeColor = sentiment.includes('positive') ? 'bg-green-100 text-green-700' :
+                    sentiment.includes('negative') ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700';
+                const snippet = email.body ? (email.body.length > 50 ? email.body.slice(0, 50) + '...' : email.body) : '';
+                const emailJson = JSON.stringify(email).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+                return `<tr class="border-b animated-row ${rowClass}">
+            <td class="py-4 px-6 font-medium text-gray-900">${i + 1}</td>
+            <td class="py-4 px-6 font-medium text-gray-900 data-cell">${email.sender || ''}</td>
+            <td class="py-4 px-6 font-medium text-gray-900 data-cell">${email.subject || ''}</td>
+            <td class="py-4 px-6 text-gray-600 body-cell" title="${email.body || ''}">${snippet}</td>
+            <td class="py-4 px-6"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${badgeColor}">${email.ai_sentiment || 'unknown'}</span></td>
+            <td class="py-4 px-6">${email.timestamp || ''}</td>
+            <td class="py-4 px-6"><button onclick='showEmailDetails(JSON.parse("${emailJson}"))' class="text-indigo-600 hover:text-indigo-800 font-semibold text-sm">View Analysis</button></td>
+            <td class="py-4 px-6 text-sm text-gray-700">${email.forwarded_to || '—'}</td>
+        </tr>`;
+            }).join('');
+        }
+
+        function updateStats(stats) {
+            document.getElementById('stat-total').textContent = stats.total || 0;
+            document.getElementById('stat-positive').textContent = stats.positive || 0;
+            document.getElementById('stat-negative').textContent = stats.negative || 0;
+            document.getElementById('stat-neutral').textContent = stats.neutral || 0;
+        }
+
+        function showEmailDetails(email) {
+            document.getElementById('modal-subject').textContent = `Analysis of: ${email.subject || ''}`;
+            document.getElementById('modal-summary').textContent = email.summary || 'No summary available';
+            document.getElementById('modal-reply').textContent = email.suggested_reply || 'No suggested reply';
+            document.getElementById('modal-body').textContent = email.body || '';
+            document.getElementById('email-modal').classList.remove('hidden');
+        }
+
+        document.getElementById('email-modal').addEventListener('click', e => {
+            if (e.target.id === 'email-modal') e.target.classList.add('hidden');
+        });
+    </script>
+
+</body>
+
+</html>
