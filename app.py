@@ -1,170 +1,142 @@
 import os
-import json
-import time
-import re
-import requests
-from functools import wraps
-from dotenv import load_dotenv
-from flask import Flask, render_template, jsonify, redirect, url_for, request, session
-from datetime import datetime
-from pytz import timezone, utc
+import threading
 import logging
+from functools import wraps
+from flask import Flask, render_template, jsonify, redirect, url_for, request, session
+from dotenv import load_dotenv
+from datetime import datetime, timezone, timedelta 
 
-from emails_db import get_all_emails, get_stats, get_sentiment_counts_for_graph
-from process_emails import process_unread_emails
-from email_utils import clean_email_body
+# Imports are now safe and linear, as email_sender no longer imports app.
+from process_emails import has_unread_emails, process_unread_emails
+from emails_db import create_emails_table
+from emails_db import (
+    get_all_emails,
+    get_stats,
+    get_sentiment_counts_for_graph,
+)
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
+create_emails_table()
+load_dotenv("secretkeys.env")
 
 app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
-load_dotenv("secretkeys.env")
-app.secret_key = os.getenv('FLASK_SECRET_KEY') 
+USERNAME = os.getenv("USERNAME")
+PASSWORD = os.getenv("PASSWORD")
 
-PREDEFINED_USER_EMAIL = os.getenv('USERNAME')
-PREDEFINED_PASSWORD = os.getenv('PASSWORD')
 
-LOCAL_TZ = timezone('Asia/Kolkata')  # IST
+# --- Custom Jinja Filter for IST Conversion (Defined and Registered here) ---
+def utc_to_ist(utc_dt) -> str:
+    """Converts a UTC datetime object or string to IST (UTC + 5:30) and formats it."""
+    if isinstance(utc_dt, str):
+        try:
+            # Parse from string, handling potential microseconds
+            utc_dt = datetime.strptime(utc_dt.split('.')[0], "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            # Fallback for unexpected formats
+            utc_dt = datetime.now(timezone.utc)
 
-def format_datetime(dt: datetime) -> str:
-    """Formats a UTC datetime object to a local timezone string."""
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=utc)
+    if utc_dt.tzinfo is None:
+        utc_dt = utc_dt.replace(tzinfo=timezone.utc)
+        
+    # IST is UTC + 5 hours 30 minutes
+    ist_timezone = timezone(timedelta(hours=5, minutes=30))
+    ist_dt = utc_dt.astimezone(ist_timezone)
     
-    local_dt = dt.astimezone(LOCAL_TZ)
-    return local_dt.strftime('%b %d, %Y %I:%M %p %Z')
+    # Format: 14-Dec-2025 10:30 PM
+    return ist_dt.strftime("%d-%b-%Y %I:%M %p")
 
-@app.context_processor
-def utility_processor():
-    """Makes functions available in Jinja templates."""
-    return dict(format_datetime=format_datetime)
+# Register the filter with the Flask app instance
+app.jinja_env.filters['to_ist'] = utc_to_ist
 
+
+# ---------- AUTH ----------
 def login_required(f):
-    """Decorator to ensure user is logged in."""
     @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'logged_in' not in session or not session['logged_in']:
-            return redirect(url_for('login', next=request.url))
+    def wrap(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect(url_for("login"))
         return f(*args, **kwargs)
-    return decorated_function
+    return wrap
 
-@app.route('/')
-@app.route('/dashboard')
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        if request.form["email"] == USERNAME and request.form["password"] == PASSWORD:
+            session["logged_in"] = True
+            return redirect(url_for("index"))
+        return render_template("login.html", error="Invalid credentials")
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
+@app.route("/")
 @login_required
 def index():
-    """Main dashboard showing emails and stats."""
-    emails = get_all_emails(limit=10) 
-    stats = get_stats()
-    sentiment_counts = get_sentiment_counts_for_graph()
-    
-    for email in emails:
-        ts = email.get('timestamp')
-        if isinstance(ts, datetime):
-            email['timestamp'] = format_datetime(ts)
-            
-        sentiment = email.get('ai_sentiment')
-        if not sentiment or sentiment.title() in ['Llm_Failed', 'Unclassified']:
-            email['ai_sentiment'] = 'Neutral'
-        else:
-            email['ai_sentiment'] = sentiment.title()
+    return render_template(
+        "dashboard.html",
+        emails=get_all_emails(),
+        stats=get_stats(),
+        sentiment_counts=get_sentiment_counts_for_graph()
+    )
 
-    return render_template('dashboard.html', emails=emails, stats=stats, sentiment_counts=sentiment_counts)
 
-@app.route('/sentiment-graph')
+@app.route("/graph")
 @login_required
 def sentiment_graph():
-    """Renders the graph view."""
-    sentiment_counts = get_sentiment_counts_for_graph()
-    return render_template('graph.html', sentiment_counts=sentiment_counts)
+    return render_template(
+        "graph.html",
+        sentiment_counts=get_sentiment_counts_for_graph()
+    )
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    """Handles user login."""
-    if request.method == 'POST':
-        email_input = request.form.get('email')
-        password_input = request.form.get('password')
 
-        if email_input == PREDEFINED_USER_EMAIL and password_input == PREDEFINED_PASSWORD:
-            session['logged_in'] = True
-            log.info(f"User {email_input} logged in successfully.")
-            next_url = request.args.get('next') or url_for('index')
-            return redirect(next_url)
-        else:
-            log.warning(f"Failed login attempt for user: {email_input}")
-            return render_template('login.html', error='Invalid credentials.'), 401
-            
-    return render_template('login.html')
-
-@app.route('/logout')
-def logout():
-    """Handles user logout."""
-    session.pop('logged_in', None)
-    return redirect(url_for('login'))
-
-@app.route('/api/refresh', methods=['POST'])
+@app.route("/api/refresh", methods=["POST"])
 @login_required
-def api_refresh():
-    """
-    API endpoint to trigger email fetching and return updated data (user initiated).
-    """
-    error_message = None
-    new_count = 0
-    try:
-        new_count = process_unread_emails(limit=5)
-    except Exception as e:
-        log.error(f"Error processing emails via API refresh: {e}", exc_info=True)
-        error_message = f"An error occurred during email fetching: {e}"
+def refresh():
+    count = process_unread_emails(limit=3)
 
-    try:
-        emails = get_all_emails(limit=10)
-        stats = get_stats()
-    except Exception as e:
-        log.error(f"Error fetching data after processing: {e}", exc_info=True)
-        return jsonify({"error": "Database read failed", "new_count": new_count}), 500
+    return jsonify({
+        "status": "done",
+        "processed": count
+    }), 200
 
+
+# ---------- API DATA ENDPOINT ----------
+# app.py (inside api_stats function)
+
+@app.route("/api/stats")
+@login_required
+def api_stats():
+    stats = get_stats()
+    emails = get_all_emails()   
+
+    emails_list = []
     for email in emails:
-        email['body'] = clean_email_body(email.get('body', ''))
-        
-        ts = email.get('timestamp')
-        if isinstance(ts, datetime):
-            email['timestamp'] = format_datetime(ts)
-            
-        sentiment = email.get('ai_sentiment')
-        if not sentiment or sentiment.title() in ['Llm_Failed', 'Unclassified']:
-            email['ai_sentiment'] = 'Neutral' 
-        else:
-            email['ai_sentiment'] = sentiment.title()
-            
-    response = {"emails": emails, "stats": stats, "new_count": new_count}
-    if error_message:
-        response["error"] = error_message
+        emails_list.append({
+            "id": email["id"],
+            "sender": email["sender"],
+            "subject": email["subject"],
+            "body": email["body"],
+            "ai_sentiment": email["ai_sentiment"],
+            "summary": email["summary"],
+            "suggested_reply": email["suggested_reply"],
+            "forwarded_to_team": email.get("forwarded_to_team", "N/A"),
+            "timestamp": utc_to_ist(email["timestamp"])
+        })
 
-    return jsonify(response)
-
-
-@app.route('/api/scheduled_fetch', methods=['GET'])
-def scheduled_fetch():
-    """
-    New API endpoint triggered by Vercel Cron Job to run the background task.
-    This replaces the local fetch_loop.py file.
-    """
-    log.info("Triggered by Vercel Cron Job.")
-    try:
-        count = process_unread_emails(limit=5) 
-        log.info(f"Scheduled job processed {count} new unread emails.")
-        return jsonify({"status": "success", "processed_count": count}), 200
-    except Exception as e:
-        log.error(f"Error during scheduled email fetch: {e}", exc_info=True)
-        return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({
+        "emails": emails_list,
+        "stats": stats
+    })
 
 
-if __name__ == '__main__':
-    try:
-        from emails_db import recreate_table
-        recreate_table()
-        log.info("Database table ensured/recreated for fresh start.")
-    except Exception as e:
-        log.error(f"Could not initialize database: {e}", exc_info=True)
-
-    app.run(host='0.0.0.0', port=os.environ.get('PORT', 5001), debug=True)
+if __name__ == "__main__":
+    app.run(debug=True, port=5001, host="0.0.0.0")

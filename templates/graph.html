@@ -6,8 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email Sentiment Graph</title>
 
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 
     <style>
@@ -19,105 +21,111 @@
         }
 
         .animated-card {
-            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
         .animated-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-                0 4px 6px -4px rgba(0, 0, 0, 0.05);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
         }
 
         .chart-container {
-            /* Ensures responsive height within the flex container */
-            height: 400px; 
+            height: 420px;
         }
     </style>
 </head>
 
 <body class="p-4 sm:p-8">
 
+    <!-- HEADER -->
     <header class="mb-8 flex justify-between items-center bg-white p-4 rounded-xl shadow-xl">
-        <h1 class="text-3xl font-extrabold text-gray-800">Sentiment Distribution Overview</h1>
-        <nav class="flex space-x-4">
-            <a href="{{ url_for('index') }}" class="text-gray-600 hover:text-indigo-800 font-semibold">Dashboard</a>
+        <h1 class="text-3xl font-extrabold text-gray-800">
+            Sentiment Distribution Overview
+        </h1>
+        <nav class="flex space-x-6">
+            <a href="{{ url_for('index') }}" class="text-gray-600 hover:text-indigo-700 font-semibold">
+                Dashboard
+            </a>
             <a href="{{ url_for('sentiment_graph') }}"
-                class="text-indigo-600 hover:text-indigo-800 font-semibold border-b-2 border-indigo-600 pb-1">Graph</a>
-            <a href="{{ url_for('logout') }}" class="text-red-600 hover:text-red-800 font-semibold">Logout</a>
+                class="text-indigo-600 font-semibold border-b-2 border-indigo-600 pb-1">
+                Graph
+            </a>
+            <a href="{{ url_for('logout') }}" class="text-red-600 hover:text-red-800 font-semibold">
+                Logout
+            </a>
         </nav>
     </header>
 
+    <!-- MAIN CONTENT -->
     <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
+        <!-- GRAPH -->
         <div class="lg:col-span-2 bg-white p-8 rounded-xl shadow-xl animated-card">
             <div class="chart-container">
                 <canvas id="sentimentBarChart"></canvas>
             </div>
         </div>
 
+        <!-- STATS -->
         <div class="bg-white p-8 rounded-xl shadow-xl animated-card">
-            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Detailed Sentiment Statistics</h3>
+            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">
+                Detailed Sentiment Statistics
+            </h3>
 
-            {% set positive_count = sentiment_counts.get('Positive', 0) %}
-            {% set negative_count = sentiment_counts.get('Negative', 0) %}
-            {% set neutral_count = sentiment_counts.get('Neutral', 0) %}
-            {% set total = positive_count + negative_count + neutral_count %}
+            {% set positive = sentiment_counts.get('Positive', 0) %}
+            {% set negative = sentiment_counts.get('Negative', 0) %}
+            {% set neutral = sentiment_counts.get('Neutral', 0) %}
+            {% set total = positive + negative + neutral %}
 
             <ul class="space-y-4 text-lg">
-                <li class="flex justify-between items-center border-b pb-2">
-                    <strong class="text-gray-600">Total Emails Analyzed:</strong>
-                    <span id="stat-total" class="font-extrabold text-3xl text-indigo-600">{{ total }}</span>
+                <li class="flex justify-between border-b pb-2">
+                    <span>Total Emails Analyzed</span>
+                    <span class="text-3xl font-extrabold text-indigo-600">{{ total }}</span>
                 </li>
-
-                <li class="flex justify-between items-center border-b pb-2">
-                    <strong class="text-gray-600">Positive Emails:</strong>
-                    <span class="font-bold text-2xl text-green-600">{{ positive_count }}</span>
+                <li class="flex justify-between border-b pb-2">
+                    <span>Positive Emails</span>
+                    <span class="text-2xl font-bold text-green-600">{{ positive }}</span>
                 </li>
-
-                <li class="flex justify-between items-center border-b pb-2">
-                    <strong class="text-gray-600">Negative Emails:</strong>
-                    <span class="font-bold text-2xl text-red-600">{{ negative_count }}</span>
+                <li class="flex justify-between border-b pb-2">
+                    <span>Negative Emails</span>
+                    <span class="text-2xl font-bold text-red-600">{{ negative }}</span>
                 </li>
-
-                <li class="flex justify-between items-center">
-                    <strong class="text-gray-600">Neutral / Unclassified Emails:</strong>
-                    <span class="font-bold text-2xl text-yellow-600">{{ neutral_count }}</span>
+                <li class="flex justify-between">
+                    <span>Neutral Emails</span>
+                    <span class="text-2xl font-bold text-yellow-600">{{ neutral }}</span>
                 </li>
             </ul>
         </div>
     </main>
 
-    <script>
-        // CORRECTION: Changed sentiment_data to sentiment_counts to match Flask context
-        const sentiment_counts = {{ sentiment_counts | tojson }};
+ 
 
-        // Extract counts safely
-        const positive = sentiment_counts.Positive || 0;
-        const negative = sentiment_counts.Negative || 0;
-        const neutral = sentiment_counts.Neutral || 0;
+
+
+    <!-- CHART SCRIPT -->
+    <script>
+        const sentimentCounts = {{ sentiment_counts | tojson }};
+
+        const positive = sentimentCounts.Positive || 0;
+        const negative = sentimentCounts.Negative || 0;
+        const neutral = sentimentCounts.Neutral || 0;
         const total = positive + negative + neutral;
 
-        // Initialize Chart
         const ctx = document.getElementById('sentimentBarChart').getContext('2d');
+
         new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: ['Positive', 'Negative', 'Neutral'],
                 datasets: [{
-                    label: 'Number of Emails',
+                    label: 'Emails',
                     data: [positive, negative, neutral],
                     backgroundColor: [
-                        'rgba(16, 185, 129, 0.8)', // Green
-                        'rgba(239, 68, 68, 0.8)',  // Red
-                        'rgba(245, 158, 11, 0.8)'  // Yellow
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(245, 158, 11, 0.8)'
                     ],
-                    borderColor: [
-                        'rgba(16, 185, 129, 1)',
-                        'rgba(239, 68, 68, 1)',
-                        'rgba(245, 158, 11, 1)'
-                    ],
-                    borderWidth: 1,
-                    borderRadius: 4
+                    borderRadius: 6
                 }]
             },
             options: {
@@ -127,13 +135,12 @@
                     legend: { display: false },
                     title: {
                         display: true,
-                        text: `Sentiment Breakdown (Total: ${total} Emails)`,
-                        font: { size: 16, weight: '600' }
+                        text: `Sentiment Breakdown (Total: ${total} Emails)`
                     }
                 },
                 scales: {
-                    x: { grid: { display: false } },
-                    y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }
+                    y: { beginAtZero: true, ticks: { precision: 0 } },
+                    x: { grid: { display: false } }
                 }
             }
         });

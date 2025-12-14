@@ -28,7 +28,8 @@ def main_loop():
     
     while True:
         try:
-            count = process_unread_emails(limit=5)
+            # Fetches up to 5 emails in each loop
+            count = process_unread_emails(limit=5) 
             
             if count > 0:
                 log.info(f"Processed {count} new unread emails.")
@@ -37,7 +38,8 @@ def main_loop():
 
         except Exception as e:
             log.error(f"Critical error in fetch loop: {e}", exc_info=True)
-            time.sleep(FETCH_INTERVAL_SECONDS * 5)
+            # Sleep longer on critical errors to prevent rapid failure loop
+            time.sleep(FETCH_INTERVAL_SECONDS * 5) 
             
         time.sleep(FETCH_INTERVAL_SECONDS)
 

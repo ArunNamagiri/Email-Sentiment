@@ -43,21 +43,24 @@ def get_email_body(msg: email.message.Message) -> str:
     """Extracts the plain text body from a message object, prioritizing text over HTML."""
     body_text = ""
     body_html = ""
-    
+
     if msg.is_multipart():
         for part in msg.walk():
             ctype = part.get_content_type()
             cdisp = part.get_content_disposition()
-            
-            if cdisp in ['attachment', 'inline'] and ctype not in ['text/plain', 'text/html']:
+            charset = part.get_content_charset()
+
+            if cdisp in ('attachment', 'inline'):
                 continue
+            
+            if not charset:
+                charset = 'utf-8' # Assume UTF-8 if no charset is specified
 
             try:
                 payload = part.get_payload(decode=True)
                 if payload is None:
                     continue
-                
-                charset = part.get_content_charset() or 'utf-8'
+
                 decoded_payload = payload.decode(charset, errors='ignore')
 
                 if ctype == 'text/plain':
@@ -91,12 +94,15 @@ def clean_email_body(body: str) -> str:
     if not body:
         return ""
     
+    # Simple regex to split the body at common reply headers.
     cleaned_body = re.split(r'On\s+.*wrote:|Message\-ID:.*|<.*@.*>.*Sent:.*|-----Original Message-----|\s*From:.*Sent:.*To:.*Subject:', body, 1, re.IGNORECASE)[0]
     
+    # Remove quoted lines (lines starting with >)
     lines = cleaned_body.split('\n')
     cleaned_lines = [line for line in lines if not line.strip().startswith('>')]
     cleaned_body = '\n'.join(cleaned_lines)
-    
-    cleaned_body = re.sub(r'(\n[ \t]*){3,}', '\n\n', cleaned_body).strip()
+
+    # Further clean up multiple newlines and trim
+    cleaned_body = re.sub(r'\n{2,}', '\n\n', cleaned_body).strip()
     
     return cleaned_body
